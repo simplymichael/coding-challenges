@@ -4,6 +4,43 @@
 #include <string.h>
 #include <unistd.h>
 
+int count_bytes(FILE* file) { 
+  int bytes;
+  for(bytes = 0; getc(file) != EOF; ++bytes); // See https://stackoverflow.com/a/25613854/1743192
+
+  return bytes;
+}
+
+int count_lines(FILE* file) { 
+  // See: https://stackoverflow.com/a/70708991/1743192
+
+  #define BUF_SIZE 65536
+
+  int lines = 0;
+  char buf[BUF_SIZE];
+
+  while(1) {
+    size_t res = fread(buf, 1, BUF_SIZE, file);
+    
+    if(ferror(file)) {
+      return -1; 
+    }
+
+    int i;
+    for(i = 0; i < res; i++) {
+      if(buf[i] == '\n') { 
+        lines++;
+      }
+    }
+
+    if(feof(file)) { 
+      break;
+    }
+  }
+
+  return lines;
+}
+
 
 int main(int argc, char* argv[]) {
   if(argc != 3) {
@@ -12,33 +49,28 @@ int main(int argc, char* argv[]) {
   }
 
   FILE* in;
-  char ch;
-  char * op;
 
-  while((ch = getopt(argc, argv, "c")) != EOF) {
+  if(!(in = fopen(argv[2], "r"))) { 
+    fprintf(stderr, "File %s not found\r\n", argv[2]);
+    return 1;
+  }
+
+  char * op;
+  char ch;
+  int result;
+
+  while((ch = getopt(argc, argv, "cl")) != EOF) {
   	switch(ch) {
-  	  case 'c': 
-  	  	op = "bytes"; 
-  	  	break;
+  	  case 'c': result = count_bytes(in); break;
+      case 'l': result = count_lines(in); break;
   	}
   }
 
   argc -= optind;
   argv += optind;
 
-  if(!(in = fopen(argv[0], "r"))) { 
-  	fprintf(stderr, "File %s not found\r\n", argv[0]);
-  	return 1;
-  }
-
-  if(op == "bytes") { 
-  	int bytes;
-    for(bytes = 0; getc(in) != EOF; ++bytes); // See https://stackoverflow.com/a/25613854/1743192
-
-    printf("  %i %s\r\n", bytes, argv[0]);
-  }
-
-
+  printf("  %i %s\r\n", result, argv[0]);
   fclose(in);
+
   return 0;
 }
