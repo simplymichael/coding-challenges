@@ -93,15 +93,16 @@ long count_words(FILE* file) {
 
 
 int main(int argc, char* argv[]) {
-  if(argc != 3) {
+  if(argc < 2) {
   	fprintf(stderr, "Kindly specify a file (test.txt) or enter a text on the CLI.\r\n");
   	return 1;
   }
 
   FILE* in;
+  int file_pos = (argc == 2 ? 1 : 2);
 
-  if(!(in = fopen(argv[2], "r"))) { 
-    fprintf(stderr, "File %s not found\r\n", argv[2]);
+  if(!(in = fopen(argv[file_pos], "r"))) { 
+    fprintf(stderr, "File %s not found\r\n", argv[file_pos]);
     return 1;
   }
 
@@ -121,7 +122,30 @@ int main(int argc, char* argv[]) {
   argc -= optind;
   argv += optind;
 
-  printf("  %li %s\r\n", result, argv[0]);
+  if(result) {
+    printf("  %li %s\r\n", result, argv[0]);
+  } else {
+    long words = count_words(in);
+    fclose(in);
+
+    in = fopen(argv[0], "r");
+
+    long lines = count_lines(in);
+    fclose(in);
+
+    in = fopen(argv[0], "r");
+
+    long bytes = count_bytes(in);
+
+    printf(
+      "  %li %li %li %s\r\n", 
+      lines,
+      words,  
+      bytes,
+      argv[0]
+    );
+  }
+  
   fclose(in);
 
   return 0;
