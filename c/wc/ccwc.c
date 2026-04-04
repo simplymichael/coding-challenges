@@ -1,12 +1,40 @@
 #include <ctype.h>
+#include <locale.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <wchar.h>
 
 long count_bytes(FILE* file) { 
   // See https://stackoverflow.com/a/25613854/1743192
 
   long count;
   for(count = 0; getc(file) != EOF; ++count);
+
+  return count;
+}
+
+long count_chars(FILE* file) { 
+  long count = 0;
+
+  // If current locale supports multibyte sequences 
+  // handle UTF-8 correctly, in a locale-aware way.
+  if(setlocale(LC_ALL, "") != NULL) {
+    wint_t wc; 
+
+    // Read wide characters until EOF
+    while((wc = fgetwc(file)) != WEOF) {
+      count++;
+    }
+  } else { 
+    char ch;
+
+    while((ch = fgetc(file)) != EOF) {
+      count++; 
+    }
+
+    // Alternatively, we can reuse the count_bytes function and just do 
+    // return count_bytes(file);
+  }
 
   return count;
 }
@@ -81,10 +109,11 @@ int main(int argc, char* argv[]) {
   char ch;
   long result;
 
-  while((ch = getopt(argc, argv, "clw")) != EOF) {
+  while((ch = getopt(argc, argv, "clmw")) != EOF) {
   	switch(ch) {
   	  case 'c': result = count_bytes(in); break;
       case 'l': result = count_lines(in); break;
+      case 'm': result = count_chars(in); break;
       case 'w': result = count_words(in); break;
   	}
   }
