@@ -1,22 +1,22 @@
+#include <ctype.h>
 #include <stdio.h>
-#include <stdarg.h>
-#include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
 
-int count_bytes(FILE* file) { 
-  int bytes;
-  for(bytes = 0; getc(file) != EOF; ++bytes); // See https://stackoverflow.com/a/25613854/1743192
+long count_bytes(FILE* file) { 
+  // See https://stackoverflow.com/a/25613854/1743192
 
-  return bytes;
+  long count;
+  for(count = 0; getc(file) != EOF; ++count);
+
+  return count;
 }
 
-int count_lines(FILE* file) { 
+long count_lines(FILE* file) { 
   // See: https://stackoverflow.com/a/70708991/1743192
 
   #define BUF_SIZE 65536
 
-  int lines = 0;
+  long count = 0;
   char buf[BUF_SIZE];
 
   while(1) {
@@ -29,7 +29,7 @@ int count_lines(FILE* file) {
     int i;
     for(i = 0; i < res; i++) {
       if(buf[i] == '\n') { 
-        lines++;
+        count++;
       }
     }
 
@@ -38,7 +38,29 @@ int count_lines(FILE* file) {
     }
   }
 
-  return lines;
+  return count;
+}
+
+long count_words(FILE* file) {
+  // See: https://stackoverflow.com/a/28892601/1743192
+
+  char ch;
+  long count = 0;
+  int PreviousWasSpace = 1;
+   
+  while((ch = fgetc(file)) != EOF) {
+    if(isspace(ch)) {
+      PreviousWasSpace = 1;
+    } else {
+      if(PreviousWasSpace) { 
+        count++; 
+      }
+
+      PreviousWasSpace = 0;
+    }
+  }
+   
+  return count;
 }
 
 
@@ -57,19 +79,20 @@ int main(int argc, char* argv[]) {
 
   char * op;
   char ch;
-  int result;
+  long result;
 
-  while((ch = getopt(argc, argv, "cl")) != EOF) {
+  while((ch = getopt(argc, argv, "clw")) != EOF) {
   	switch(ch) {
   	  case 'c': result = count_bytes(in); break;
       case 'l': result = count_lines(in); break;
+      case 'w': result = count_words(in); break;
   	}
   }
 
   argc -= optind;
   argv += optind;
 
-  printf("  %i %s\r\n", result, argv[0]);
+  printf("  %li %s\r\n", result, argv[0]);
   fclose(in);
 
   return 0;
