@@ -1,6 +1,7 @@
 #include <ctype.h>
 #include <locale.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <wchar.h>
 
@@ -91,24 +92,72 @@ long count_words(FILE* file) {
   return count;
 }
 
+void count_all(FILE* in, long *words, long *lines, long *bytes, long *chars) {
+  *words = *lines = *bytes = *chars = 0;
+
+  int c;
+  int previous_was_space = 1;
+
+  while((c = fgetc(in)) != EOF) {
+    (*bytes)++;
+
+    if(c == '\n') {
+      (*lines)++;
+    }
+
+    if(isspace(c)) {
+      previous_was_space = 1;
+    } else {
+      if(previous_was_space) {
+        (*words)++;
+      }
+
+      previous_was_space = 0;
+    }
+
+    // UTF-8 character counting:
+    // A new character starts whenever we see a byte that is not a continuation (0b10xxxxxx).
+    /*if((c & 0xC0) != 0x80) {
+      (*chars)++;
+    }*/
+
+    // Character counting (UTF-8 friendly):
+    // Continuation bytes are 128–191. If not in that range, it's a new character.
+    if(c < 128 || c > 191) {
+      (*chars)++;
+    }
+  }
+}
+
 
 int main(int argc, char* argv[]) {
-  if(argc < 2) {
-  	fprintf(stderr, "Kindly specify a file (test.txt) or enter a text on the CLI.\r\n");
-  	return 1;
-  }
-
   FILE* in;
-  int file_pos = (argc == 2 ? 1 : 2);
 
-  if(!(in = fopen(argv[file_pos], "r"))) { 
-    fprintf(stderr, "File %s not found\r\n", argv[file_pos]);
-    return 1;
+  if(argc == 1) {
+    in = stdin;
+  } else if(argc == 2) { 
+    in = fopen(argv[1], "r");
+
+    if(!in) {
+      in = stdin;
+    }
+
+    if(!in) { 
+      fprintf(stderr, "Error: cannot open file %s\n", argv[1]);
+      return EXIT_FAILURE;
+    }
+  } else if(argc == 3) {
+    in = fopen(argv[2], "r"); 
+
+    if(!in) { 
+      fprintf(stderr, "Error: cannot open file %s\n", argv[2]);
+      return EXIT_FAILURE;
+    }
   }
 
   char * op;
   char ch;
-  long result;
+  long result = 0;
 
   while((ch = getopt(argc, argv, "clmw")) != EOF) {
   	switch(ch) {
@@ -122,31 +171,28 @@ int main(int argc, char* argv[]) {
   argc -= optind;
   argv += optind;
 
-  if(result) {
-    printf("  %li %s\r\n", result, argv[0]);
-  } else {
-    long words = count_words(in);
-    fclose(in);
+  if(result) { 
+    (argv[0] 
+      ? printf("  %li %s\n", result, argv[0])
+      : printf("  %li\n", result)
+    );
+  } else { 
+    long words;
+    long lines;
+    long bytes;
+    long chars;
 
-    in = fopen(argv[0], "r");
+    count_all(in, &words, &lines, &bytes, &chars);
 
-    long lines = count_lines(in);
-    fclose(in);
-
-    in = fopen(argv[0], "r");
-
-    long bytes = count_bytes(in);
-
-    printf(
-      "  %li %li %li %s\r\n", 
-      lines,
-      words,  
-      bytes,
-      argv[0]
+    (argv[0] 
+      ? printf("  %li %li %li %s\n", lines, words, bytes, argv[0])
+      : printf("  %li %li %li\n", lines, words, bytes)
     );
   }
   
-  fclose(in);
+  if(in != stdin) { 
+    fclose(in);
+  }
 
   return 0;
 }
