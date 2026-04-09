@@ -7,20 +7,32 @@
 #include "./headers/string.h"
 
 
-// Load file into string
-char* load_file(const char* filename) { 
+// Read file contents into a string
+// @param {string} filename
+char* read_file(const char* filename) { 
   FILE* f = fopen(filename, "r");
 
   if(!f) { 
   	return NULL; 
   }
 
-  // Get the size of the file
-  fseek(f, 0, SEEK_END);
-  long size = ftell(f);
-  rewind(f);
+  /* 
+   * Get the size of the file
+   */
+  // Move the file pointer/cursor zero places from the end of the file 
+  // (aka, to the end of the file).
+  fseek(f, 0, SEEK_END); 
 
-  // Read the file's contents
+  // Get the current position of the file pointer/cursor.
+  long size = ftell(f);
+
+  /* 
+   * Read the file's contents 
+   */
+  rewind(f); // Or fseek(f, 0, SEEK_SET); // fseek() is preferred as it returns a status code for error checking.
+  // Move the file pointer/cursor zero places from the start of the file 
+  // (aka, to the beginning of the file).
+  // fseek(f, 0, SEEK_SET); 
   char* data = malloc(size + 1);
   fread(data, 1, size, f);
   data[size] = '\0';
@@ -37,7 +49,7 @@ int main(int argc, char* argv[]) {
   }
 
   const char* filename = argv[1];
-  const char* file_contents = load_file(filename);
+  const char* file_contents = read_file(filename);
   JsonValue* json = parse_value(&file_contents);
 
   if(json == NULL) {
